@@ -6,6 +6,8 @@
 usingnamespace std.os;
 const std = @import("../../std.zig");
 const expectEqual = std.testing.expectEqual;
+const expect = std.testing.expect;
+const bpf = std.os.linux.bpf;
 
 // instruction classes
 pub const LD = 0x00;
@@ -829,7 +831,7 @@ pub const ProgAttachAttr = extern struct {
 };
 
 /// struct used by Cmd.prog_test_run command
-pub const TestAttr = extern struct {
+pub const TestRunAttr = extern struct {
     prog_fd: fd_t,
     retval: u32,
     /// input: len of data_in
@@ -971,3 +973,196 @@ pub const Attr = extern union {
     enable_stats: EnableStatsAttr,
     iter_create: IterCreateAttr,
 };
+
+pub const Log = struct {
+    level: u32,
+    buf: []u8,
+};
+
+pub fn map_create(map_type: MapType, key_size: u32, value_size: u32, max_entries: u32) !fd_t {
+    var attr = Attr{
+        .map_create = std.mem.zeroes(MapCreateAttr),
+    };
+
+    attr.map_create.map_type = @enumToInt(map_type);
+    attr.map_create.key_size = key_size;
+    attr.map_create.value_size = value_size;
+    attr.map_create.max_entries = max_entries;
+
+    const rc = bpf(.map_create, &attr, @sizeOf(MapCreateAttr));
+    return switch (errno(rc)) {
+        0 => @intCast(fd_t, rc),
+        EINVAL => error.MapTypeOrAttrInvalid,
+        ENOMEM => error.SystemResources,
+        EPERM => error.AccessDenied,
+        else => |err| unexpectedErrno(rc),
+    };
+}
+
+test "map_create" {
+    const map = try map_create(.hash, 4, 4, 32);
+    defer std.os.close(map);
+}
+
+pub fn map_lookup_elem(fd: fd_t, key: []const u8, value: []u8) !void {
+    var attr = Attr{
+        .map_elem = std.mem.zeroes(MapElemAttr),
+    };
+
+    attr.map_elem.map_fd = fd;
+    attr.map_elem.key = @ptrToInt(key.ptr);
+    attr.map_elem.result.value = @ptrToInt(value.ptr);
+
+    const rc = bpf(.map_lookup_elem, &attr, @sizeOf(MapElemAttr));
+    switch (errno(rc)) {
+        0 => return,
+        EBADF => return error.BadFd,
+        EFAULT => unreachable,
+        EINVAL => return error.FieldInAttrNeedsZeroing,
+        ENOENT => return error.NotFound,
+        EPERM => return error.AccessDenied,
+        else => |err| return unexpectedErrno(rc),
+    }
+}
+
+pub fn map_update_elem(fd: fd_t, key: []const u8, value: []const u8, flags: u64) !void {
+    var attr = Attr{
+        .map_elem = std.mem.zeroes(MapElemAttr),
+    };
+
+    attr.map_elem.map_fd = fd;
+    attr.map_elem.key = @ptrToInt(key.ptr);
+    attr.map_elem.result = .{ .value = @ptrToInt(value.ptr) };
+    attr.map_elem.flags = flags;
+
+    const rc = bpf(.map_update_elem, &attr, @sizeOf(MapElemAttr));
+    switch (errno(rc)) {
+        0 => return,
+        E2BIG => return error.ReachedMaxEntries,
+        EBADF => return error.BadFd,
+        EFAULT => unreachable,
+        EINVAL => return error.FieldInAttrNeedsZeroing,
+        ENOMEM => return error.SystemResources,
+        EPERM => return error.AccessDenied,
+        else => |err| return unexpectedErrno(err),
+    }
+}
+
+pub fn map_delete_elem(fd: fd_t, key: []const u8) !void {
+    var attr = Attr{
+        .map_elem = std.mem.zeroes(MapElemAttr),
+    };
+
+    attr.map_elem.map_fd = fd;
+    attr.map_elem.key = @ptrToInt(u64, key.ptr);
+
+    const rc = bpf(.map_delete_elem, &attr, @sizeOf(MapElemAttr));
+    switch (errno(rc)) {
+        0 => return,
+        EBADF => return error.BadFd,
+        EFAULT => unreachable,
+        EINVAL => return error.FieldInAttrNeedsZeroing,
+        ENOENT => return error.NotFound,
+        EPERM => return error.AccessDenied,
+        else => |err| return unexpectedErrno(err),
+    }
+}
+
+pub fn map_get_next_key(fd: fd_t, key: []const u8, next_key: []u8) !void {
+    var attr = Attr{
+        .map_elem = std.mem.zeroes(MapElemAttr),
+    };
+
+    attr.map_elem.map_fd = fd;
+    attr.map_elem.key = @ptrToInt(u64, key);
+    attr.map_elem.next_key = @ptrToInt(u64, next_key);
+
+    const rc = bpf(.map_get_next_key, &attr, @sizeOf(MapElemAttr));
+    switch (errno(rc)) {
+        0 => return,
+        EBADF => error.BadFd,
+        EFAULT => unreachable,
+        EFAULT => unreachable,
+        EINVAL => unreachable,
+        ENOENT => return error.NotFound,
+        ENOMEM => return error.SystemResources,
+        EPERM => return error.AccessDenied,
+        else => |err| return unexpectedErrno(err),
+    }
+}
+
+pub fn prog_load(
+    prog_type: ProgType,
+    insns: []const Insn,
+    log: ?*Log,
+    license: []const u8,
+    kern_version: u32,
+) !fd_t {
+    var attr = Attr{
+        .prog_load = std.mem.zeroes(ProgLoadAttr),
+    };
+
+    attr.prog_load.prog_type = @enumToInt(prog_type);
+    attr.prog_load.insns = @ptrToInt(insns.ptr);
+    attr.prog_load.insn_cnt = @intCast(u32, insns.len);
+    attr.prog_load.license = @ptrToInt(license.ptr);
+    attr.prog_load.kern_version = kern_version;
+
+    if (log) |l| {
+        attr.prog_load.log_buf = @ptrToInt(l.buf.ptr);
+        attr.prog_load.log_size = @intCast(u32, l.buf.len);
+        attr.prog_load.log_level = l.level;
+    }
+
+    const rc = bpf(.prog_load, &attr, @sizeOf(ProgLoadAttr));
+    return switch (errno(rc)) {
+        0 => @intCast(fd_t, rc),
+        EACCES => error.UnsafeProgram,
+        EFAULT => unreachable,
+        EINVAL => error.InvalidProgram,
+        EPERM => error.AccessDenied,
+        else => |err| unexpectedErrno(err),
+    };
+}
+
+pub fn obj_pin(fd: fd_t, pathname: []const u8) !void {
+    var attr = Attr{
+        .bpf_obj = std.mem.zeroes(ObjAttr),
+    };
+
+    attr.bpf_obj.bpf_fd = fd;
+    attr.bpf_obj.pathname = @ptrToInt(pathname.ptr);
+    attr.bpf_obj.file_flags = 0;
+
+    const rc = bpf(.obj_pin, &attr, @sizeOf(ObjAttr));
+    return switch (errno(rc)) {
+        0 => {},
+        EOPNOTSUPP => error.OpNotSupported,
+        EPERM => error.AccessDenied,
+        else => |err| unexpectedErrno(err),
+    };
+}
+
+pub fn obj_get(pathname: []const u8, flags: ObjFlags) !fd_t {
+    var attr = Attr{
+        .bpf_obj = std.mem.zeroes(ObjAttr),
+    };
+
+    attr.bpf_obj.bpf_fd = 0;
+    attr.bpf_obj.pathname = @ptrToInt(pathname.ptr);
+    attr.bpf_obj.file_flags = flags;
+
+    const rc = bpf(.obj_get, &attr, @sizeOf(ObjAttr));
+    return switch (errno(rc)) {
+        0 => @intCast(fd_t, rc),
+        EINVAL => error.InvalidArguments,
+        EPERM => error.AccessDenied,
+        else => |err| unexpectedErrno(err),
+    };
+}
+
+test "implement all BPF commands" {
+    inline for (std.meta.fields(Cmd)) |field| {
+        expect(@hasDecl(@This(), field));
+    }
+}
