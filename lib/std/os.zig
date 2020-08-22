@@ -2692,7 +2692,7 @@ pub fn socket(domain: u32, socket_type: u32, protocol: u32) SocketError!socket_t
             }
             return fd;
         },
-        EACCES => return error.PermissionDenied,
+        EPERM, EACCES => return error.PermissionDenied,
         EAFNOSUPPORT => return error.AddressFamilyNotSupported,
         EINVAL => return error.ProtocolFamilyNotAvailable,
         EMFILE => return error.ProcessFdQuotaExceeded,
