@@ -9,6 +9,8 @@ const expectEqual = std.testing.expectEqual;
 const expect = std.testing.expect;
 const bpf = std.os.linux.bpf;
 
+pub const kern = @import("bpf/kern.zig");
+
 // instruction classes
 pub const LD = 0x00;
 pub const LDX = 0x01;
