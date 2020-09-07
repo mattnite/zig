@@ -13,6 +13,11 @@ const expect = std.testing.expect;
 
 pub const btf = @import("bpf/btf.zig");
 
+pub const kern = switch (std.builtin.arch) {
+    .bpfel, .bpfeb => @import("bpf/kern.zig"),
+    else => struct {},
+};
+
 // instruction classes
 pub const LD = 0x00;
 pub const LDX = 0x01;
