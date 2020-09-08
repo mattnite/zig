@@ -239,7 +239,15 @@ pub const TunnelKey = packed struct {
 };
 
 pub const Udp6Sock = packed struct {};
-pub const XdpBuff = packed struct {};
+
+pub const XdpMd = packed struct {
+    data: u32,
+    data_end: u32,
+    data_meta: u32,
+    ingress_ifindex: u32,
+    rx_queue_index: u32,
+    egress_ifindex: u32,
+};
 
 pub const XfrmStat = packed struct {
     reqid: u32,
