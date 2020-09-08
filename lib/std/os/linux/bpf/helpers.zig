@@ -1,3 +1,5 @@
+usingnamespace @import("types.zig");
+
 pub const map_lookup_elem = @intToPtr(fn (map: *const MapDef, key: ?*const c_void) ?*c_void, 1);
 pub const map_update_elem = @intToPtr(fn (map: *const MapDef, key: ?*const c_void, value: ?*const c_void, flags: u64) c_long, 2);
 pub const map_delete_elem = @intToPtr(fn (map: *const MapDef, key: ?*const c_void) c_long, 3);
@@ -27,7 +29,7 @@ pub const perf_event_output = @intToPtr(fn (ctx: ?*c_void, map: *const MapDef, f
 pub const skb_load_bytes = @intToPtr(fn (skb: ?*c_void, offset: u32, to: ?*c_void, len: u32) c_long, 26);
 pub const get_stackid = @intToPtr(fn (ctx: ?*c_void, map: *const MapDef, flags: u64) c_long, 27);
 // from and to point to __be32
-pub const csum_diff = @intToPtr(fn (from: *u32, from_size: u32, to: *u32, to_size: u32, seed: __wsum) i64, 28);
+pub const csum_diff = @intToPtr(fn (from: *u32, from_size: u32, to: *u32, to_size: u32, seed: u32) i64, 28);
 pub const skb_get_tunnel_opt = @intToPtr(fn (skb: *SkBuff, opt: ?*c_void, size: u32) c_long, 29);
 pub const skb_set_tunnel_opt = @intToPtr(fn (skb: *SkBuff, opt: ?*c_void, size: u32) c_long, 30);
 // proto is __be16
@@ -40,7 +42,7 @@ pub const probe_write_user = @intToPtr(fn (dst: ?*c_void, src: ?*const c_void, l
 pub const current_task_under_cgroup = @intToPtr(fn (map: *const MapDef, index: u32) c_long, 37);
 pub const skb_change_tail = @intToPtr(fn (skb: *SkBuff, len: u32, flags: u64) c_long, 38);
 pub const skb_pull_data = @intToPtr(fn (skb: *SkBuff, len: u32) c_long, 39);
-pub const csum_update = @intToPtr(fn (skb: *SkBuff, csum: __wsum) i64, 40);
+pub const csum_update = @intToPtr(fn (skb: *SkBuff, csum: u32) i64, 40);
 pub const set_hash_invalid = @intToPtr(fn (skb: *SkBuff) void, 41);
 pub const get_numa_node_id = @intToPtr(fn () c_long, 42);
 pub const skb_change_head = @intToPtr(fn (skb: *SkBuff, len: u32, flags: u64) c_long, 43);

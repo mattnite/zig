@@ -1,3 +1,4 @@
+pub usingnamespace @import("types.zig");
 pub const helpers = @import("helpers.zig");
 
 /// Perform a lookup in *map* for an entry associated to *key*.
@@ -241,9 +242,7 @@ pub const get_cgroup_classid: fn (skb: *SkBuff) u32 = @compileError("TODO");
 /// Therefore, at load time, all checks on pointers previously done by the
 /// verifier are invalidated and must be performed again, if the helper is used
 /// in combination with direct packet access.
-///
-/// vlan_proto is __be16
-pub const skb_vlan_push: fn (skb: *SkBuff, vlan_proto: u16, vlan_tci: u16) !void = @compileError("TODO");
+pub const skb_vlan_push: fn (skb: *SkBuff, vlan_proto: BigEndian(u16), vlan_tci: u16) !void = @compileError("TODO");
 
 /// Pop a VLAN header from the packet associated to *skb*.
 ///
@@ -476,7 +475,6 @@ pub const skb_load_bytes: fn (skb: anytype, offset: u32, to: []u8) !void = @comp
 /// case of failure.
 pub const get_stackid: fn (ctx: anytype, map: *const MapDef, flags: u64) c_long = @compileError("TODO");
 
-// TODO: figure out what __wsum is
 /// Compute a checksum difference, from the raw buffer pointed by *from*, of
 /// length *from_size* (that must be a multiple of 4), towards the raw buffer
 /// pointed by *to*, of size *to_size* (same remark). An optional *seed* can be
@@ -499,7 +497,7 @@ pub const get_stackid: fn (ctx: anytype, map: *const MapDef, flags: u64) c_long 
 /// from and to indexes are big endian
 ///
 /// Returns the checksum result
-pub const csum_diff: fn (from: []u8, to: []u8, seed: __wsum) u64 = @compileError("TODO");
+pub const csum_diff: fn (from: []u8, to: []u8, seed: u32) u64 = @compileError("TODO");
 
 /// Retrieve tunnel options metadata for the packet associated to *skb*, and
 /// store the raw tunnel option data to the buffer *opt* of *size*.
@@ -541,9 +539,7 @@ pub const skb_set_tunnel_opt: fn (skb: *SkBuff, opt: []u8) !void = @compileError
 /// Therefore, at load time, all checks on pointers previously done by the
 /// verifier are invalidated and must be performed again, if the helper is used
 /// in combination with direct packet access.
-///
-/// proto is __be16
-pub const skb_change_proto: fn (skb: *SkBuff, proto: u16, flags: u64) !void = @compileError("TODO");
+pub const skb_change_proto: fn (skb: *SkBuff, proto: BigEndian(u16), flags: u64) !void = @compileError("TODO");
 
 /// Change the packet type for the packet associated to *skb*. This comes down
 /// to setting *skb*\ **->pkt_type** to *type*, except the eBPF program does not
@@ -667,7 +663,7 @@ pub const skb_pull_data: fn (skb: *SkBuff, len: u32) !void = @compileError("TODO
 /// after data has been written into the packet through direct packet access.
 ///
 /// Returns the checksum
-pub const csum_update: fn (skb: *SkBuff, csum: __wsum) u64 = @compileError("TODO");
+pub const csum_update: fn (skb: *SkBuff, csum: u32) u64 = @compileError("TODO");
 
 /// Invalidate the current *skb*\ **->hash**. It can be used after mangling on
 /// headers through direct packet access, in order to indicate that the hash is
