@@ -1979,21 +1979,42 @@ pub const MapDef = packed struct {
     map_flags: u32,
 };
 
-pub fn Map(comptime Key: type, comptime Value: type) type {
+pub fn Map(
+    comptime Key: type,
+    comptime Value: type,
+    comptime map_type: MapType,
+    comptime max_entries: comptime_int,
+) type {
     return packed struct {
-        type: u32,
-        key_size: u32,
-        value_size: u32,
-        max_entries: u32,
-        map_flags: u32,
+        def: MapDef,
 
         const Self = @This();
 
+        pub fn init() Self {
+            return .{
+                .type = map_type,
+                .key_size = @sizeOf(Key),
+                .value_size = @sizeOf(Value),
+                .max_entries = max_entries,
+                .map_flags = 0,
+            };
+        }
+
+        pub fn with_flags(flags: u32) Self {
+            return .{
+                .type = map_type,
+                .key_size = @sizeOf(Key),
+                .value_size = @sizeOf(Value),
+                .max_entries = max_entries,
+                .map_flags = flags,
+            };
+        }
+
         /// Perform a lookup in *map* for an entry associated to *key*.
-        pub fn lookup(self: *const Self, key: *const Key) ?*Value {
+        pub fn lookup(self: *const Self, key: Key) ?*Value {
             assert_bpf_program();
 
-            @compileError("TODO");
+            return helpers.map_lookup_elem(&self.def, &key);
         }
 
         /// Add or update the value of the entry associated to *key* in *map* with
@@ -2009,17 +2030,25 @@ pub fn Map(comptime Key: type, comptime Value: type) type {
         /// Flag value **BPF_NOEXIST** cannot be used for maps of types
         /// **BPF_MAP_TYPE_ARRAY** or **BPF_MAP_TYPE_PERCPU_ARRAY**  (all elements
         /// always exist), the helper would return an error.
-        pub fn update(self: *const Self, key: *const Key, value: *const Value, flags: u64) !void {
+        pub fn update(self: *const Self, key: Key, value: Value, flags: u64) !void {
             assert_bpf_program();
 
-            @compileError("TODO");
+            const rc = helpers.map_update_elem(&self.def, &key, &value, flags);
+            return switch (rc) {
+                0 => {},
+                else => error.Unknown,
+            };
         }
 
         /// Delete entry with *key* from *map*.
-        pub fn delete(self: *const Self, key: *const Key) !void {
+        pub fn delete(self: *const Self, key: Key) !void {
             assert_bpf_program();
 
-            @compileError("TODO");
+            const rc = helpers.map_delete_elem(&self.def, &key);
+            return switch (rc) {
+                0 => {},
+                else => error.Unknown,
+            };
         }
 
         /// Push an element *value* in *map*. *flags* is one of:
@@ -2027,24 +2056,40 @@ pub fn Map(comptime Key: type, comptime Value: type) type {
         /// **BPF_EXIST**
         /// 	If the queue/stack is full, the oldest element is removed to make room
         /// 	for this.
-        pub fn push(self: *const Self, value: anytype, flags: u64) !void {
+        pub fn push(self: *const Self, value: Value, flags: u64) !void {
             assert_bpf_program();
 
-            @compileError("TODO");
+            const rc = helpers.map_push_elem(&self.def, &value, flags);
+            return switch (rc) {
+                0 => {},
+                else => error.Unknown,
+            };
         }
 
         /// Pop an element from *map*.
-        pub fn pop(self: *const Self, value: anytype) !void {
+        pub fn pop(self: *const Self) !?Value {
             assert_bpf_program();
 
-            @compileError("TODO");
+            const ret: Value = undefined;
+            const rc = helpers.map_pop_elem(&self.def, &ret);
+            return switch (rc) {
+                0 => ret,
+                ENOENT => null, // not sure if this is right
+                else => error.Unknown,
+            };
         }
 
         /// Get an element from *map* without removing it.
-        pub fn peek(self: *const Self, value: anytype) !void {
+        pub fn peek(self: *const Self) !?Value {
             assert_bpf_program();
 
-            @compileError("TODO");
+            const ret: Value = undefined;
+            const rc = helpers.map_peek_elem(&self.def, &ret);
+            return switch (rc) {
+                0 => ret,
+                ENOENT => null, // not sure if this is right
+                else => error.Unknown,
+            };
         }
     };
 }
