@@ -1141,6 +1141,39 @@ pub const ProgType = extern enum(u32) {
     /// context type: bpf_sk_lookup
     sk_lookup,
     _,
+
+    pub fn Ctx(comptime prog_type: ProgType) type {
+        return switch (prog_type) {
+            .socket_filter,
+            .sched_cls,
+            .sched_act,
+            .cgroup_skb,
+            .lwt_in,
+            .lwt_out,
+            .lwt_xmit,
+            .sk_skb,
+            .lwt_seg6local,
+            .flow_dissector,
+            => *SkBuff,
+            .kprobe => *PtRegs,
+            .tracepoint => *u64,
+            .xdp => *XdpMd,
+            .perf_event => *PerfEventData,
+            .cgroup_sock => *Sock,
+            .sock_ops => *SockOps,
+            .cgroup_device => *CGroupDevCtx,
+            .sk_msg => *SkMsgMd,
+            .raw_tracepoint => *RawTracepointArgs,
+            .cgroup_sock_addr => *BpfSockAddr,
+            .lirc_mode2 => *u32,
+            .sk_reuseport => *SkReuseportMd,
+            .cgroup_sysctl => *SysCtl,
+            .raw_tracepoint_writable => *RawTracepointArgs,
+            .cgroup_sockopt => *SockOpt,
+            .tracing, .struct_ops, .ext, .lsm => [*]u8,
+            .sk_lookup => *SkLookup,
+        };
+    }
 };
 
 pub const AttachType = extern enum(u32) {
@@ -1667,4 +1700,56 @@ test "prog_load" {
     defer std.os.close(prog);
 
     expectError(error.UnsafeProgram, prog_load(.socket_filter, &bad_prog, null, "MIT", 0));
+}
+
+pub const TestResults = struct {
+    retval: u32,
+    duration: u32,
+};
+
+pub fn prog_test_run(
+    prog: fd_t,
+    ctx: []u8,
+    data: []u8,
+) !TestResults {
+    var test_run = std.mem.zeroes(TestRunAttr);
+
+    test_run.prog_fd = prog;
+    test_run.data_in = @ptrToInt(data.ptr);
+    test_run.data_size_in = @intCast(u32, data.len);
+    test_run.data_out = @ptrToInt(data.ptr);
+    test_run.data_size_out = @intCast(u32, data.len);
+    test_run.ctx_in = @ptrToInt(ctx.ptr);
+    test_run.ctx_size_in = @intCast(u32, ctx.len);
+    test_run.ctx_out = @ptrToInt(ctx.ptr);
+    test_run.ctx_size_out = @intCast(u32, ctx.len);
+
+    const rc = bpf(.prog_load, @ptrCast(*Attr, &test_run), @sizeOf(TestRunAttr));
+    return switch (errno(rc)) {
+        0 => .{
+            .retval = test_run.retval,
+            .duration = test_run.duration,
+        },
+        EFAULT => unreachable,
+        EINVAL => unreachable,
+        ENOMEM => error.NoMemory,
+        E2BIG => error.TooBig, // not sure what this means
+        else => |err| unexpectedErrno(err),
+    };
+}
+
+test "prog_test_run" {
+    const good_prog = [_]Insn{
+        Insn.mov(.r0, 0),
+        Insn.exit(),
+    };
+
+    var ctx = std.mem.zeroes([256]u8);
+    var data = std.mem.zeroes([256]u8);
+
+    const prog = try prog_load(.socket_filter, &good_prog, null, "MIT", 0);
+    defer std.os.close(prog);
+
+    const results = try prog_test_run(prog, &ctx, &data);
+    std.debug.print("{}\n", .{results});
 }
