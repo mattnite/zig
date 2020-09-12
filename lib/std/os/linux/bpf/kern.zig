@@ -60,6 +60,8 @@ pub const BpfSockAddr = packed struct {
     msg_src_ip6: [4]u32,
     sk: MdPtr(*Sock),
 
+    const Self = @This();
+
     /// Bind the socket associated to *ctx* to the address pointed by *addr*, of
     /// length *addr_len*. This allows for making outgoing connection from the
     /// desired IP address, which can be useful for example when all processes
@@ -72,10 +74,10 @@ pub const BpfSockAddr = packed struct {
     /// IP_BIND_ADDRESS_NO_PORT-like behavior and lets the kernel efficiently pick
     /// up an unused port as long as 4-tuple is unique. Passing non-zero port might
     /// lead to degraded performance.
-    pub fn bind(ctx: *BpfSockAddr, addr: *SockAddr, addr_len: i32) !void {
+    pub fn bind(self: *Self, addr: *SockAddr, addr_len: i32) !void {
         assert_bpf_program();
 
-        const rc = helpers.bind(ctx, addr, addr_len);
+        const rc = helpers.bind(self, addr, addr_len);
         return switch (rc) {
             0 => {},
             else => error.Unknown,
@@ -93,10 +95,10 @@ pub const BpfSockAddr = packed struct {
     ///
     /// Returns A 8-byte long non-decreasing number on success, or null if the
     /// socket field is missing inside *ctx*.
-    pub fn get_cookie(ctx: *BpfSockAddr) ?u64 {
+    pub fn get_cookie(self: *Self) ?u64 {
         assert_bpf_program();
 
-        const rc = helpers.get_socket_cookie(ctx);
+        const rc = helpers.get_socket_cookie(self);
         return if (rc == 0) null else rc;
     }
 
@@ -126,10 +128,10 @@ pub const BpfSockAddr = packed struct {
     ///   **TCP_SYNCNT**, **TCP_USER_TIMEOUT**.
     /// * **IPPROTO_IP**, which supports *optname* **IP_TOS**.
     /// * **IPPROTO_IPV6**, which supports *optname* **IPV6_TCLASS**.
-    pub fn setsockopt(socket: *BpfSockAddr, level: i32, opname: i32, opt: []u8) !void {
+    pub fn setsockopt(self: *Self, level: i32, opname: i32, opt: []u8) !void {
         assert_bpf_program();
 
-        const rc = helpers.setsockopt(socket, level, opname, opt.ptr, opt.len);
+        const rc = helpers.setsockopt(self, level, opname, opt.ptr, opt.len);
         return switch (rc) {
             0 => {},
             else => error.Unknown,
@@ -155,10 +157,10 @@ pub const BpfSockAddr = packed struct {
     ///   **TCP_CONGESTION**.
     /// * **IPPROTO_IP**, which supports *optname* **IP_TOS**.
     /// * **IPPROTO_IPV6**, which supports *optname* **IPV6_TCLASS**.
-    pub fn getsockopt(socket: *BpfSockAddr, level: i32, optname: i32, opt: []u8) !void {
+    pub fn getsockopt(self: *Self, level: i32, optname: i32, opt: []u8) !void {
         assert_bpf_program();
 
-        const rc = helpers.getsockopt(socket, level, opname, opt.ptr, opt.len);
+        const rc = helpers.getsockopt(self, level, opname, opt.ptr, opt.len);
         return switch (rc) {
             0 => {},
             else => error.Unknown,
@@ -275,6 +277,8 @@ pub const SkBuff = packed struct {
     sk: MdPtr(*Sock),
     gso_size: u32,
 
+    const Self = @This();
+
     /// Store *len* bytes from address *from* into the packet associated to *skb*,
     /// at *offset*. *flags* are a combination of **BPF_F_RECOMPUTE_CSUM**
     /// (automatically recompute the checksum for the packet after storing the
@@ -285,7 +289,7 @@ pub const SkBuff = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn skb_store_bytes(skb: *SkBuff, offset: u32, from: []const u8, flags: u64) !void {
+    pub fn store_bytes(self: *Self, offset: u32, from: []const u8, flags: u64) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -308,7 +312,7 @@ pub const SkBuff = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn l3_csum_replace(skb: *SkBuff, offset: u32, from: u64, to: u64, size: u64) !void {
+    pub fn l3_csum_replace(self: *Self, offset: u32, from: u64, to: u64, size: u64) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -337,7 +341,7 @@ pub const SkBuff = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn l4_csum_replace(skb: *SkBuff, offset: u32, from: u64, to: u64, flags: u64) !void {
+    pub fn l4_csum_replace(self: *Self, offset: u32, from: u64, to: u64, flags: u64) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -359,7 +363,7 @@ pub const SkBuff = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn clone_redirect(skb: *SkBuff, ifindex: u32, flags: u64) !void {
+    pub fn clone_redirect(self: *Self, ifindex: u32, flags: u64) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -386,7 +390,7 @@ pub const SkBuff = packed struct {
     /// **CONFIG_CGROUP_NET_CLASSID** configuration option set to "**y**" or to
     /// "**m**".
     /// Return the classid, or 0 for the default unconfigured classid.
-    pub fn get_cgroup_classid(skb: *SkBuff) u32 {
+    pub fn get_cgroup_classid(self: *Self) u32 {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -401,7 +405,7 @@ pub const SkBuff = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn skb_vlan_push(skb: *SkBuff, vlan_proto: BigEndian(u16), vlan_tci: u16) !void {
+    pub fn vlan_push(self: *Self, vlan_proto: BigEndian(u16), vlan_tci: u16) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -413,7 +417,7 @@ pub const SkBuff = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn skb_vlan_pop(skb: *SkBuff) !void {
+    pub fn vlan_pop(self: *Self) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -461,7 +465,7 @@ pub const SkBuff = packed struct {
     ///
     /// This can be used together with various tunnels such as VXLan, Geneve, GRE or
     /// IP in IP (IPIP).
-    pub fn skb_get_tunnel_key(skb: *SkBuff, key: *TunnelKey, size: u32, flags: u64) !void {
+    pub fn get_tunnel_key(self: *Self, key: *TunnelKey, size: u32, flags: u64) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -496,7 +500,7 @@ pub const SkBuff = packed struct {
     ///
     /// See also the description of the **bpf_skb_get_tunnel_key**\ () helper for
     /// additional information.
-    pub fn skb_set_tunnel_key(skb: *SkBuff, key: *TunnelKey, size: u32, flags: u64) !void {
+    pub fn set_tunnel_key(self: *Self, key: *TunnelKey, size: u32, flags: u64) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -521,7 +525,7 @@ pub const SkBuff = packed struct {
     ///
     /// Return the realm of the route for the packet associated to *skb*, or 0 if
     /// none was found.
-    pub fn get_route_realm(skb: *SkBuff) u32 {
+    pub fn get_route_realm(self: *Self) u32 {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -539,7 +543,7 @@ pub const SkBuff = packed struct {
     /// eBPF program. This allows for full customization of these headers.
     ///
     /// Returns the size of the option data retrieved.
-    pub fn skb_get_tunnel_opt(skb: *SkBuff, opt: []u8) usize {
+    pub fn get_tunnel_opt(self: *Self, opt: []u8) usize {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -550,7 +554,7 @@ pub const SkBuff = packed struct {
     ///
     /// See also the description of the **bpf_skb_get_tunnel_opt**\ () helper for
     /// additional information.
-    pub fn skb_set_tunnel_opt(skb: *SkBuff, opt: []u8) !void {
+    pub fn set_tunnel_opt(self: *Self, opt: []u8) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -575,7 +579,7 @@ pub const SkBuff = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn skb_change_proto(skb: *SkBuff, proto: BigEndian(u16), flags: u64) !void {
+    pub fn change_proto(self: *Self, proto: BigEndian(u16), flags: u64) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -600,7 +604,7 @@ pub const SkBuff = packed struct {
     /// 	Send packet to group.
     /// **PACKET_OTHERHOST**
     /// 	Send packet to someone else.
-    pub fn skb_change_type(skb: *SkBuff, type: u32) !void {
+    pub fn change_type(self: *Self, type: u32) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -614,7 +618,7 @@ pub const SkBuff = packed struct {
     ///     * 0, if the *skb* failed the cgroup2 descendant test.
     /// 	* 1, if the *skb* succeeded the cgroup2 descendant test.
     /// 	* A negative error code, if an error occurred.
-    pub fn skb_under_cgroup(skb: *SkBuff, map: *const CGroupArray, index: u32) !void {
+    pub fn under_cgroup(self: *Self, map: *const CGroupArray, index: u32) !bool {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -629,7 +633,7 @@ pub const SkBuff = packed struct {
     /// the **BPF_F_INVALIDATE_HASH** are actions susceptible to clear the hash and
     /// to trigger a new computation for the next call to **bpf_get_hash_recalc**\
     /// ().
-    pub fn get_hash_recalc(skb: *SkBuff) u32 {
+    pub fn get_hash_recalc(self: *Self) u32 {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -650,7 +654,7 @@ pub const SkBuff = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn skb_change_tail(skb: *SkBuff, len: u32, flags: u64) !void {
+    pub fn change_tail(self: *Self, len: u32, flags: u64) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -683,7 +687,7 @@ pub const SkBuff = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn skb_pull_data(skb: *SkBuff, len: u32) !void {
+    pub fn pull_data(self: *Self, len: u32) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -696,7 +700,7 @@ pub const SkBuff = packed struct {
     /// after data has been written into the packet through direct packet access.
     ///
     /// Returns the checksum
-    pub fn csum_update(skb: *SkBuff, csum: u32) u64 {
+    pub fn csum_update(self: *Self, csum: u32) u64 {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -706,7 +710,7 @@ pub const SkBuff = packed struct {
     /// headers through direct packet access, in order to indicate that the hash is
     /// outdated and to trigger a recalculation the next time the kernel tries to
     /// access this hash or when the **bpf_get_hash_recalc**\ () helper is called.
-    pub fn set_hash_invalid(skb: *SkBuff) void {
+    pub fn set_hash_invalid(self: *Self) void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -726,7 +730,7 @@ pub const SkBuff = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn skb_change_head(skb: *SkBuff, len: u32, flags: u64) !void {
+    pub fn change_head(self: *Self, len: u32, flags: u64) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -736,7 +740,7 @@ pub const SkBuff = packed struct {
     /// or if it is not a full socket (i.e. if it is a time-wait or a request socket
     /// instead), **overflowuid** value is returned (note that **overflowuid** might
     /// also be the actual UID value for the socket).
-    pub fn get_socket_uid(skb: *SkBuff) u32 {
+    pub fn get_socket_uid(self: *Self) u32 {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -744,7 +748,7 @@ pub const SkBuff = packed struct {
 
     /// Set the full hash for *skb* (set the field *skb*\ **->hash**) to value
     /// *hash*.
-    pub fn set_hash(skb: *SkBuff, hash: u32) !void {
+    pub fn set_hash(self: *Self, hash: u32) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -787,7 +791,7 @@ pub const SkBuff = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn skb_adjust_room(skb: *SkBuff, len_diff: i32, mode: u32, flags: u64) !void {
+    pub fn adjust_room(self: *Self, len_diff: i32, mode: u32, flags: u64) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -804,7 +808,7 @@ pub const SkBuff = packed struct {
     ///
     /// Returns A 8-byte long non-decreasing number on success, or null if the
     /// socket field is missing inside *ctx*.
-    pub fn get_socket_cookie(ctx: anytype) ?u64 {
+    pub fn get_socket_cookie(self: *Self) ?u64 {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -817,7 +821,7 @@ pub const SkBuff = packed struct {
     /// egress path otherwise). This is the only flag supported for now.
     ///
     /// Return **SK_PASS** on success, or **SK_DROP** on error.
-    pub fn sk_redirect_map(skb: *SkBuff, map: *const SockMap, key: u32, flags: u64) !void {
+    pub fn redirect_map(self: *Self, map: *const SockMap, key: u32, flags: u64) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -849,7 +853,7 @@ pub const SkBuff = packed struct {
     ///	flag is present, egress otherwise). This is the only flag supported for now.
     ///
     ///	Return **SK_PASS** on success, or **SK_DROP** on error.
-    pub fn sk_redirect_hash(skb: *SkBuff, map: *const SockHash, key: anytype, flags: u64) !void {
+    pub fn redirect_hash(self: *Self, map: *const SockHash, key: anytype, flags: u64) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -881,7 +885,7 @@ pub const SkBuff = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn lwt_push_encap(skb: *SkBuff, type: u32, hdr: []u8) !void {
+    pub fn lwt_push_encap(self: *Self, type: u32, hdr: []u8) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -895,7 +899,7 @@ pub const SkBuff = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn lwt_seg6_store_bytes(skb: *SkBuff, offset: u32, from: []const u8) !void {
+    pub fn lwt_seg6_store_bytes(self: *Self, offset: u32, from: []const u8) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -910,7 +914,7 @@ pub const SkBuff = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn lwt_seg6_adjust_srh(skb: *SkBuff, offset: u32, delta: i32) !void {
+    pub fn lwt_seg6_adjust_srh(self: *Self, offset: u32, delta: i32) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -937,7 +941,7 @@ pub const SkBuff = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn lwt_seg6_action(skb: *SkBuff, action: u32, param: []u8) !void {
+    pub fn lwt_seg6_action(self: *Self, action: u32, param: []u8) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -953,7 +957,7 @@ pub const SkBuff = packed struct {
     /// This helper can be used on TC egress path, but not on ingress, and is
     /// available only if the kernel was compiled with the
     /// **CONFIG_SOCK_CGROUP_DATA** configuration option.
-    pub fn skb_cgroup_id(skb: *SkBuff) ?u64 {
+    pub fn cgroup_id(self: *Self) ?u64 {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -970,7 +974,7 @@ pub const SkBuff = packed struct {
     ///
     ///	The format of returned id and helper limitations are same as in
     ///	**bpf_skb_cgroup_id**\ ().
-    pub fn skb_ancestor_cgroup_id(skb: *SkBuff, ancestor_level: i32) ?u64 {
+    pub fn ancestor_cgroup_id(self: *Self, ancestor_level: i32) ?u64 {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -982,7 +986,7 @@ pub const SkBuff = packed struct {
     ///
     ///	Return 1 if the **CE** flag is set (either by the current helper call or
     ///	because it was already present), 0 if it is not set.
-    pub fn skb_ecn_set_ce(skb: *SkBuff) bool {
+    pub fn ecn_set_ce(self: *Self) bool {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -1010,7 +1014,7 @@ pub const SkBuff = packed struct {
     ///		a call from outside of TC ingress.
     ///		**-ESOCKTNOSUPPORT** if the socket type is not supported
     ///		(reuseport).
-    pub fn sk_assign(skb: *SkBuff, sk: *Sock, flags: u64) !void {
+    pub fn sk_assign(self: *Self, sk: *Sock, flags: u64) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -1043,7 +1047,7 @@ pub const SkBuff = packed struct {
     /// 	**BPF_CSUM_LEVEL_QUERY**, the current skb->csum_level is returned or the
     /// 	error code -EACCES in case the skb is not subject to
     /// 	CHECKSUM_UNNECESSARY.
-    pub fn csum_level(skb: *SkBuff, level: u64) !void {
+    pub fn csum_level(self: *Self, level: u64) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -1059,7 +1063,7 @@ pub const SkBuff = packed struct {
     /// of packet data and to the byte after the last byte of packet data. However,
     /// it remains useful if one wishes to read large quantities of data at once
     /// from a packet into the eBPF stack.
-    pub fn skb_load_bytes(skb: anytype, offset: u32, to: []u8) !void {
+    pub fn load_bytes(self: *Self, offset: u32, to: []u8) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -1091,7 +1095,7 @@ pub const SkBuff = packed struct {
     ///		*   0 on success (packet is forwarded, nexthop neighbor exists)
     ///		* > 0 one of **BPF_FIB_LKUP_RET_** codes explaining why the
     ///		  packet is not forwarded or needs assist from full stack
-    pub fn fib_lookup(ctx: anytype, params: *FibLookup, plen: i32, flags: u32) c_long {
+    pub fn fib_lookup(self: *Self, params: *FibLookup, plen: i32, flags: u32) c_long {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -1108,6 +1112,8 @@ pub const SkLookup = packed struct {
     local_ip4: u32,
     local_ip6: [4]u32,
     local_port: u32,
+
+    const Self = @This();
 
     ///	Helper is overloaded depending on BPF program type. This description applies
     ///	to **BPF_PROG_TYPE_SK_LOOKUP** programs.
@@ -1145,7 +1151,7 @@ pub const SkLookup = packed struct {
     ///		  packet protocol (*ctx->protocol*).
     ///		* **-ESOCKTNOSUPPORT** if socket is not in allowed state (TCP listening
     ///		  or UDP unconnected).
-    pub fn sk_assign(ctx: *SkLookup, sk: *Sock, flags: u64) !void {
+    pub fn assign(self: *Self, sk: *Sock, flags: u64) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -1666,6 +1672,8 @@ pub const SockTuple = packed union {
 pub const SpinLock = packed struct {
     val: u32,
 
+    const Self = @This();
+
     ///	Acquire a spinlock represented by the pointer *lock*, which is stored as
     ///	part of a value of a map. Taking the lock allows to safely update the rest
     ///	of the fields in that value. The spinlock can (and must) later be released
@@ -1707,7 +1715,7 @@ pub const SpinLock = packed struct {
     ///	  () due to insufficient preemption checks (but this may change in the
     ///	  future).
     ///	* **bpf_spin_lock** is not allowed in inner maps of map-in-map.
-    pub fn spin_lock(lock: *SpinLock) !void {
+    pub fn lock(self: *Self) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -1715,7 +1723,7 @@ pub const SpinLock = packed struct {
 
     ///	Release the *lock* previously locked by a call to **bpf_spin_lock**\ (\
     ///	*lock*\ ).
-    pub fn spin_unlock(lock: *SpinLock) !void {
+    pub fn unlock(self: *Self) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -1828,6 +1836,8 @@ pub const XdpMd = packed struct {
     rx_queue_index: u32,
     egress_ifindex: u32,
 
+    const Self = @This();
+
     /// Adjust (move) *xdp_md*\ **->data** by *delta* bytes. Note that it is
     /// possible to use a negative value for *delta*. This helper can be used to
     /// prepare the packet for pushing or popping headers.
@@ -1836,7 +1846,7 @@ pub const XdpMd = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn xdp_adjust_head(xdp_md: *XdpBuff, delta: i32) !void {
+    pub fn adjust_head(self: *Self, delta: i32) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -1862,7 +1872,7 @@ pub const XdpMd = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn xdp_adjust_meta(xdp_md: *XdpBuff, delta: i32) !void {
+    pub fn adjust_meta(self: *Self, delta: i32) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -1876,7 +1886,7 @@ pub const XdpMd = packed struct {
     /// Therefore, at load time, all checks on pointers previously done by the
     /// verifier are invalidated and must be performed again, if the helper is used
     /// in combination with direct packet access.
-    pub fn xdp_adjust_tail(xdp_md: *XdpBuff, delta: i32) !void {
+    pub fn adjust_tail(self: *Self, delta: i32) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -1908,7 +1918,7 @@ pub const XdpMd = packed struct {
     ///		*   0 on success (packet is forwarded, nexthop neighbor exists)
     ///		* > 0 one of **BPF_FIB_LKUP_RET_** codes explaining why the
     ///		  packet is not forwarded or needs assist from full stack
-    pub fn fib_lookup(ctx: anytype, params: *FibLookup, plen: i32, flags: u32) c_long {
+    pub fn fib_lookup(self: *Self, params: *FibLookup, plen: i32, flags: u32) c_long {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -1978,6 +1988,10 @@ pub const MapDef = packed struct {
     max_entries: u32,
     map_flags: u32,
 };
+
+pub fn HashMap(comptime Key: type, comptime Value: type, comptime max_entries: comptime_int) type {
+    return Map(Key, Value, .hash, max_entries);
+}
 
 pub fn Map(
     comptime Key: type,
@@ -2094,6 +2108,180 @@ pub fn Map(
     };
 }
 
+pub fn PerfEventArray(comptime max_entries: comptime_int) type {
+    return packed struct {
+        map: Map(u32, u32, .perf_event_array, max_entries),
+
+        const Self = @This();
+
+        pub fn init() Self {
+            return .{
+                .map = Map(u32, u32, .perf_event_array, max_entries).init(),
+            };
+        }
+
+        /// Read the value of a perf event counter. This helper relies on a *map* of
+        /// type **BPF_MAP_TYPE_PERF_EVENT_ARRAY**. The nature of the perf event counter
+        /// is selected when *map* is updated with perf event file descriptors. The
+        /// *map* is an array whose size is the number of available CPUs, and each cell
+        /// contains a value relative to one CPU. The value to retrieve is indicated by
+        /// *flags*, that contains the index of the CPU to look up, masked with
+        /// **BPF_F_INDEX_MASK**. Alternatively, *flags* can be set to
+        /// **BPF_F_CURRENT_CPU** to indicate that the value for the current CPU should
+        /// be retrieved.
+        ///
+        /// Note that before Linux 4.13, only hardware perf event can be retrieved.
+        ///
+        /// Also, be aware that the newer helper **bpf_perf_event_read_value**\ () is
+        /// recommended over **bpf_perf_event_read**\ () in general. The latter has some
+        /// ABI quirks where error and counter value are used as a return code (which is
+        /// wrong to do since ranges may overlap). This issue is fixed with
+        /// **bpf_perf_event_read_value**\ (), which at the same time provides more
+        /// features over the **bpf_perf_event_read**\ () interface. Please refer to the
+        /// description of **bpf_perf_event_read_value**\ () for details.
+        ///
+        /// Returns the value of the perf event counter read from the map, or a negative
+        /// error code in case of failure.
+        pub fn read_counter(self: *const Self, flags: u64) u64 {
+            assert_bpf_program();
+
+            @compileError("TODO");
+        }
+
+        /// Write raw *data* blob into a special BPF perf event held by *map* of type
+        /// **BPF_MAP_TYPE_PERF_EVENT_ARRAY**. This perf event must have the following
+        /// attributes: **PERF_SAMPLE_RAW** as **sample_type**, **PERF_TYPE_SOFTWARE**
+        /// as **type**, and **PERF_COUNT_SW_BPF_OUTPUT** as **config**.
+        ///
+        /// The *flags* are used to indicate the index in *map* for which the value must
+        /// be put, masked with **BPF_F_INDEX_MASK**.  Alternatively, *flags* can be set
+        /// to **BPF_F_CURRENT_CPU** to indicate that the index of the current CPU core
+        /// should be used.
+        ///
+        /// The value to write, of *size*, is passed through eBPF stack and pointed by
+        /// *data*.
+        ///
+        /// The context of the program *ctx* needs also be passed to the helper.
+        ///
+        /// On user space, a program willing to read the values needs to call
+        /// **perf_event_open**\ () on the perf event (either for one or for all CPUs)
+        /// and to store the file descriptor into the *map*. This must be done before
+        /// the eBPF program can send data into it. An example is available in file
+        /// *samples/bpf/trace_output_user.c* in the Linux kernel source tree (the eBPF
+        /// program counterpart is in *samples/bpf/trace_output_kern.c*).
+        ///
+        /// **bpf_perf_event_output**\ () achieves better performance than
+        /// **bpf_trace_printk**\ () for sharing data with user space, and is much
+        /// better suitable for streaming data from eBPF programs.
+        ///
+        /// Note that this helper is not restricted to tracing use cases and can be used
+        /// with programs attached to TC or XDP as well, where it allows for passing
+        /// data to user space listeners. Data can be:
+        ///
+        /// * Only custom structs,
+        /// * Only the packet payload, or
+        /// * A combination of both.
+        pub fn output(self: *const PerfEventArray, ctx: anytype, flags: u64, data: []u8) !void {
+            assert_bpf_program();
+
+            @compileError("TODO");
+        }
+
+        /// Read the value of a perf event counter, and store it into *buf* of size
+        /// *buf_size*. This helper relies on a *map* of type
+        /// **BPF_MAP_TYPE_PERF_EVENT_ARRAY**. The nature of the perf event counter is
+        /// selected when *map* is updated with perf event file descriptors. The *map*
+        /// is an array whose size is the number of available CPUs, and each cell
+        /// contains a value relative to one CPU. The value to retrieve is indicated by
+        /// *flags*, that contains the index of the CPU to look up, masked with
+        /// **BPF_F_INDEX_MASK**. Alternatively, *flags* can be set to
+        /// **BPF_F_CURRENT_CPU** to indicate that the value for the current CPU should
+        /// be retrieved.
+        ///
+        /// This helper behaves in a way close to **bpf_perf_event_read**\ () helper,
+        /// save that instead of just returning the value observed, it fills the *buf*
+        /// structure. This allows for additional data to be retrieved: in particular,
+        /// the enabled and running times (in *buf*\ **->enabled** and *buf*\
+        /// **->running**, respectively) are copied. In general,
+        /// **bpf_perf_event_read_value**\ () is recommended over
+        /// **bpf_perf_event_read**\ (), which has some ABI issues and provides fewer
+        /// functionalities.
+        ///
+        /// These values are interesting, because hardware PMU (Performance Monitoring
+        /// Unit) counters are limited resources. When there are more PMU based perf
+        /// events opened than available counters, kernel will multiplex these events so
+        /// each event gets certain percentage (but not all) of the PMU time. In case
+        /// that multiplexing happens, the number of samples or counter value will not
+        /// reflect the case compared to when no multiplexing occurs. This makes
+        /// comparison between different runs difficult.  Typically, the counter value
+        /// should be normalized before comparing to other experiments. The usual
+        /// normalization is done as follows.
+        ///
+        /// ::
+        ///
+        /// 	normalized_counter = counter * t_enabled / t_running
+        ///
+        /// Where t_enabled is the time enabled for event and t_running is the time
+        /// running for event since last normalization. The enabled and running times
+        /// are accumulated since the perf event open. To achieve scaling factor between
+        /// two invocations of an eBPF program, users can use CPU id as the key (which
+        /// is typical for perf array usage model) to remember the previous value and do
+        /// the calculation inside the eBPF program.
+        ///
+        pub fn read_value(self: *const Self, flags: u64, buf: []u8) !void {
+            assert_bpf_program();
+
+            @compileError("TODO");
+        }
+
+        /// Write raw *data* blob into a special BPF perf event held by *map* of type
+        /// **BPF_MAP_TYPE_PERF_EVENT_ARRAY**. This perf event must have the following
+        /// attributes: **PERF_SAMPLE_RAW** as **sample_type**, **PERF_TYPE_SOFTWARE**
+        /// as **type**, and **PERF_COUNT_SW_BPF_OUTPUT** as **config**.
+        ///
+        /// The *flags* are used to indicate the index in *map* for which the value must
+        /// be put, masked with **BPF_F_INDEX_MASK**.  Alternatively, *flags* can be set
+        /// to **BPF_F_CURRENT_CPU** to indicate that the index of the current CPU core
+        /// should be used.
+        ///
+        /// The value to write, of *size*, is passed through eBPF stack and pointed by
+        /// *data*.
+        ///
+        /// *ctx* is a pointer to in-kernel struct sk_buff.
+        ///
+        /// This helper is similar to **bpf_perf_event_output**\ () but restricted to
+        /// raw_tracepoint bpf programs.
+        pub fn skb_output(self: *const Self, ctx: anytype, flags: u64, data: []u8) !void {
+            assert_bpf_program();
+
+            @compileError("TODO");
+        }
+
+        ///	Write raw *data* blob into a special BPF perf event held by *map* of type
+        ///	**BPF_MAP_TYPE_PERF_EVENT_ARRAY**. This perf event must have the following
+        ///	attributes: **PERF_SAMPLE_RAW** as **sample_type**, **PERF_TYPE_SOFTWARE**
+        ///	as **type**, and **PERF_COUNT_SW_BPF_OUTPUT** as **config**.
+        ///
+        ///	The *flags* are used to indicate the index in *map* for which the value must
+        ///	be put, masked with **BPF_F_INDEX_MASK**.  Alternatively, *flags* can be set
+        ///	to **BPF_F_CURRENT_CPU** to indicate that the index of the current CPU core
+        ///	should be used.
+        ///
+        ///	The value to write, of *size*, is passed through eBPF stack and pointed by
+        ///	*data*.
+        ///
+        ///	*ctx* is a pointer to in-kernel struct xdp_buff.
+        ///
+        ///	This helper is similar to **bpf_perf_eventoutput**\ () but restricted to
+        ///	raw_tracepoint bpf programs.
+        pub fn xdp_output(self: *const Self, ctx: anytype, flags: u64, data: []u8) !void {
+            assert_bpf_program();
+
+            @compileError("TODO");
+        }
+    };
+}
+
 pub const ProgArrayMap = packed struct {
     /// This special helper is used to trigger a "tail call", or in other words,
     /// to jump into another eBPF program. The same stack frame is used (but
@@ -2119,168 +2307,6 @@ pub const ProgArrayMap = packed struct {
     /// **MAX_TAIL_CALL_CNT** (not accessible to user space), which is currently
     /// set to 32.
     pub fn tail_call(ctx: anytype, prog_array_map: *const MapDef, index: u32) !void {
-        assert_bpf_program();
-
-        @compileError("TODO");
-    }
-};
-
-pub const PerfEventArray = packed struct {
-    /// Read the value of a perf event counter. This helper relies on a *map* of
-    /// type **BPF_MAP_TYPE_PERF_EVENT_ARRAY**. The nature of the perf event counter
-    /// is selected when *map* is updated with perf event file descriptors. The
-    /// *map* is an array whose size is the number of available CPUs, and each cell
-    /// contains a value relative to one CPU. The value to retrieve is indicated by
-    /// *flags*, that contains the index of the CPU to look up, masked with
-    /// **BPF_F_INDEX_MASK**. Alternatively, *flags* can be set to
-    /// **BPF_F_CURRENT_CPU** to indicate that the value for the current CPU should
-    /// be retrieved.
-    ///
-    /// Note that before Linux 4.13, only hardware perf event can be retrieved.
-    ///
-    /// Also, be aware that the newer helper **bpf_perf_event_read_value**\ () is
-    /// recommended over **bpf_perf_event_read**\ () in general. The latter has some
-    /// ABI quirks where error and counter value are used as a return code (which is
-    /// wrong to do since ranges may overlap). This issue is fixed with
-    /// **bpf_perf_event_read_value**\ (), which at the same time provides more
-    /// features over the **bpf_perf_event_read**\ () interface. Please refer to the
-    /// description of **bpf_perf_event_read_value**\ () for details.
-    ///
-    /// Returns the value of the perf event counter read from the map, or a negative
-    /// error code in case of failure.
-    pub fn perf_event_read(map: *const MapDef, flags: u64) u64 {
-        assert_bpf_program();
-
-        @compileError("TODO");
-    }
-
-    /// Write raw *data* blob into a special BPF perf event held by *map* of type
-    /// **BPF_MAP_TYPE_PERF_EVENT_ARRAY**. This perf event must have the following
-    /// attributes: **PERF_SAMPLE_RAW** as **sample_type**, **PERF_TYPE_SOFTWARE**
-    /// as **type**, and **PERF_COUNT_SW_BPF_OUTPUT** as **config**.
-    ///
-    /// The *flags* are used to indicate the index in *map* for which the value must
-    /// be put, masked with **BPF_F_INDEX_MASK**.  Alternatively, *flags* can be set
-    /// to **BPF_F_CURRENT_CPU** to indicate that the index of the current CPU core
-    /// should be used.
-    ///
-    /// The value to write, of *size*, is passed through eBPF stack and pointed by
-    /// *data*.
-    ///
-    /// The context of the program *ctx* needs also be passed to the helper.
-    ///
-    /// On user space, a program willing to read the values needs to call
-    /// **perf_event_open**\ () on the perf event (either for one or for all CPUs)
-    /// and to store the file descriptor into the *map*. This must be done before
-    /// the eBPF program can send data into it. An example is available in file
-    /// *samples/bpf/trace_output_user.c* in the Linux kernel source tree (the eBPF
-    /// program counterpart is in *samples/bpf/trace_output_kern.c*).
-    ///
-    /// **bpf_perf_event_output**\ () achieves better performance than
-    /// **bpf_trace_printk**\ () for sharing data with user space, and is much
-    /// better suitable for streaming data from eBPF programs.
-    ///
-    /// Note that this helper is not restricted to tracing use cases and can be used
-    /// with programs attached to TC or XDP as well, where it allows for passing
-    /// data to user space listeners. Data can be:
-    ///
-    /// * Only custom structs,
-    /// * Only the packet payload, or
-    /// * A combination of both.
-    pub fn perf_event_output(ctx: anytype, map: *const MapDef, flags: u64, data: []u8) !void {
-        assert_bpf_program();
-
-        @compileError("TODO");
-    }
-
-    /// Read the value of a perf event counter, and store it into *buf* of size
-    /// *buf_size*. This helper relies on a *map* of type
-    /// **BPF_MAP_TYPE_PERF_EVENT_ARRAY**. The nature of the perf event counter is
-    /// selected when *map* is updated with perf event file descriptors. The *map*
-    /// is an array whose size is the number of available CPUs, and each cell
-    /// contains a value relative to one CPU. The value to retrieve is indicated by
-    /// *flags*, that contains the index of the CPU to look up, masked with
-    /// **BPF_F_INDEX_MASK**. Alternatively, *flags* can be set to
-    /// **BPF_F_CURRENT_CPU** to indicate that the value for the current CPU should
-    /// be retrieved.
-    ///
-    /// This helper behaves in a way close to **bpf_perf_event_read**\ () helper,
-    /// save that instead of just returning the value observed, it fills the *buf*
-    /// structure. This allows for additional data to be retrieved: in particular,
-    /// the enabled and running times (in *buf*\ **->enabled** and *buf*\
-    /// **->running**, respectively) are copied. In general,
-    /// **bpf_perf_event_read_value**\ () is recommended over
-    /// **bpf_perf_event_read**\ (), which has some ABI issues and provides fewer
-    /// functionalities.
-    ///
-    /// These values are interesting, because hardware PMU (Performance Monitoring
-    /// Unit) counters are limited resources. When there are more PMU based perf
-    /// events opened than available counters, kernel will multiplex these events so
-    /// each event gets certain percentage (but not all) of the PMU time. In case
-    /// that multiplexing happens, the number of samples or counter value will not
-    /// reflect the case compared to when no multiplexing occurs. This makes
-    /// comparison between different runs difficult.  Typically, the counter value
-    /// should be normalized before comparing to other experiments. The usual
-    /// normalization is done as follows.
-    ///
-    /// ::
-    ///
-    /// 	normalized_counter = counter * t_enabled / t_running
-    ///
-    /// Where t_enabled is the time enabled for event and t_running is the time
-    /// running for event since last normalization. The enabled and running times
-    /// are accumulated since the perf event open. To achieve scaling factor between
-    /// two invocations of an eBPF program, users can use CPU id as the key (which
-    /// is typical for perf array usage model) to remember the previous value and do
-    /// the calculation inside the eBPF program.
-    ///
-    pub fn perf_event_read_value(map: *const MapDef, flags: u64, buf: []u8) !void {
-        assert_bpf_program();
-
-        @compileError("TODO");
-    }
-
-    /// Write raw *data* blob into a special BPF perf event held by *map* of type
-    /// **BPF_MAP_TYPE_PERF_EVENT_ARRAY**. This perf event must have the following
-    /// attributes: **PERF_SAMPLE_RAW** as **sample_type**, **PERF_TYPE_SOFTWARE**
-    /// as **type**, and **PERF_COUNT_SW_BPF_OUTPUT** as **config**.
-    ///
-    /// The *flags* are used to indicate the index in *map* for which the value must
-    /// be put, masked with **BPF_F_INDEX_MASK**.  Alternatively, *flags* can be set
-    /// to **BPF_F_CURRENT_CPU** to indicate that the index of the current CPU core
-    /// should be used.
-    ///
-    /// The value to write, of *size*, is passed through eBPF stack and pointed by
-    /// *data*.
-    ///
-    /// *ctx* is a pointer to in-kernel struct sk_buff.
-    ///
-    /// This helper is similar to **bpf_perf_event_output**\ () but restricted to
-    /// raw_tracepoint bpf programs.
-    pub fn skb_output(ctx: anytype, map: *const MapDef, flags: u64, data: []u8) !void {
-        assert_bpf_program();
-
-        @compileError("TODO");
-    }
-
-    ///	Write raw *data* blob into a special BPF perf event held by *map* of type
-    ///	**BPF_MAP_TYPE_PERF_EVENT_ARRAY**. This perf event must have the following
-    ///	attributes: **PERF_SAMPLE_RAW** as **sample_type**, **PERF_TYPE_SOFTWARE**
-    ///	as **type**, and **PERF_COUNT_SW_BPF_OUTPUT** as **config**.
-    ///
-    ///	The *flags* are used to indicate the index in *map* for which the value must
-    ///	be put, masked with **BPF_F_INDEX_MASK**.  Alternatively, *flags* can be set
-    ///	to **BPF_F_CURRENT_CPU** to indicate that the index of the current CPU core
-    ///	should be used.
-    ///
-    ///	The value to write, of *size*, is passed through eBPF stack and pointed by
-    ///	*data*.
-    ///
-    ///	*ctx* is a pointer to in-kernel struct xdp_buff.
-    ///
-    ///	This helper is similar to **bpf_perf_eventoutput**\ () but restricted to
-    ///	raw_tracepoint bpf programs.
-    pub fn xdp_output(ctx: anytype, map: *const MapDef, flags: u64, data: []u8) !void {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -2331,6 +2357,7 @@ pub const StackTrace = packed struct {
 };
 
 pub const SkStorage = packed struct {
+    const Self = @This();
     ///	Get a bpf-local-storage from a *sk*.
     ///
     ///	Logically, it could be thought of getting the value from a *map* with *sk*
@@ -2352,7 +2379,7 @@ pub const SkStorage = packed struct {
     ///
     ///	Return A bpf-local-storage pointer is returned on success.  **NULL** if not
     ///	found or there was an error in adding a new bpf-local-storage.
-    pub fn sk_storage_get(map: *const MapDef, sk: *Sock, value: anytype, flags: u64) ?[]u8 {
+    pub fn get(self: *const Self, sk: *Sock, value: anytype, flags: u64) ?[]u8 {
         assert_bpf_program();
 
         @compileError("TODO");
@@ -2361,7 +2388,7 @@ pub const SkStorage = packed struct {
     ///	Delete a bpf-local-storage from a *sk*.
     ///
     ///	Return 0 on success.  **-ENOENT** if the bpf-local-storage cannot be found.
-    pub fn sk_storage_delete(map: *const MapDef, sk: *Sock) !void {
+    pub fn delete(map: *const MapDef, sk: *Sock) !void {
         assert_bpf_program();
 
         @compileError("TODO");
