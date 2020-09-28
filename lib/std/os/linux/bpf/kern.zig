@@ -11,6 +11,8 @@ pub const helpers = switch (std.builtin.arch) {
     else => struct {},
 };
 
+pub const Tracepoint = @import("tracepoint.zig");
+
 pub const MapDef = extern struct {
     type: u32,
     key_size: u32,
