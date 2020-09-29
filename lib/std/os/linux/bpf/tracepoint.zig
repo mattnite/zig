@@ -43,7 +43,7 @@ pub fn CtxFromFile(comptime path: []const u8) type {
 
     comptime var fields: []const StructField = &[0]StructField{};
     comptime var expected_offset = 0;
-    comptime var padding_num = 1;
+    comptime var padding_num = 0;
 
     comptime var it = mem.tokenize(file[begin..], "\n");
     while (it.next()) |line| {
@@ -58,8 +58,10 @@ pub fn CtxFromFile(comptime path: []const u8) type {
         if (offset < expected_offset) {
             @compileError("non-monotonic field offset");
         } else if (offset > expected_offset) {
+            var buf: [16]u8 = undefined;
+            const num = std.fmt.formatIntBuf(&buf, padding_num, 10, false, .{});
             fields = fields ++ &[_]StructField{StructField{
-                .name = "_" ** padding_num,
+                .name = "__padding_" ++ buf[0..num],
                 .field_type = [offset - expected_offset]u8,
                 .default_value = void,
                 .is_comptime = false,
