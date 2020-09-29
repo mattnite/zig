@@ -52,7 +52,7 @@ pub fn CtxFromFile(comptime path: []const u8) type {
         }
 
         const field = get_value([]const u8, line, "field");
-        const name = field[mem.lastIndexOf(u8, field, " ") orelse @compileError("no spaces") + 1 ..];
+        const name = field[(mem.lastIndexOf(u8, field, " ") orelse @compileError("no spaces")) + 1 ..];
         const offset = get_value(usize, line, "offset");
 
         if (offset < expected_offset) {
