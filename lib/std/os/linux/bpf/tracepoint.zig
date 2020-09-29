@@ -42,6 +42,8 @@ pub fn CtxFromFile(comptime path: []const u8) type {
     const begin = label.len + (mem.indexOf(u8, &file, label) orelse @compileError("No format label"));
 
     comptime var fields: []const StructField = &[0]StructField{};
+    comptime var expected_offset = 0;
+    comptime var padding_num = 1;
 
     comptime var it = mem.tokenize(file[begin..], "\n");
     while (it.next()) |line| {
@@ -52,9 +54,6 @@ pub fn CtxFromFile(comptime path: []const u8) type {
         const field = get_value([]const u8, line, "field");
         const name = field[mem.lastIndexOf(u8, field, " ") orelse @compileError("no spaces") + 1 ..];
         const offset = get_value(usize, line, "offset");
-
-        comptime var expected_offset = 0;
-        comptime var padding_num = 1;
 
         if (offset < expected_offset) {
             @compileError("non-monotonic field offset");
@@ -70,12 +69,12 @@ pub fn CtxFromFile(comptime path: []const u8) type {
             expected_offset = offset;
         }
 
-        const size = get_value(usize, line, "size") * @bitSizeOf(u8);
+        const size = get_value(usize, line, "size");
         fields = fields ++ &[_]StructField{StructField{
             .name = name,
             .field_type = std.meta.Int(
                 get_value(u8, line, "signed") > 0,
-                size,
+                size * @bitSizeOf(u8),
             ),
             .default_value = void,
             .is_comptime = false,
@@ -86,7 +85,7 @@ pub fn CtxFromFile(comptime path: []const u8) type {
 
     return @Type(.{
         .Struct = .{
-            .layout = .Packed,
+            .layout = .Auto,
             .is_tuple = false,
             .fields = fields,
             .decls = &[_]Declaration{},
