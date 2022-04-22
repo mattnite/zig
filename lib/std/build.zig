@@ -50,6 +50,7 @@ pub const Builder = struct {
     default_step: *Step,
     env_map: *BufMap,
     top_level_steps: ArrayList(*TopLevelStep),
+    libexeobj_steps: ArrayList(*LibExeObjStep),
     install_prefix: []const u8,
     dest_dir: ?[]const u8,
     lib_dir: []const u8,
@@ -192,6 +193,7 @@ pub const Builder = struct {
             .available_options_map = AvailableOptionsMap.init(allocator),
             .available_options_list = ArrayList(AvailableOption).init(allocator),
             .top_level_steps = ArrayList(*TopLevelStep).init(allocator),
+            .libexeobj_steps = ArrayList(*LibExeObjStep).init(allocator),
             .default_step = undefined,
             .env_map = env_map,
             .search_prefixes = ArrayList([]const u8).init(allocator),
@@ -1752,6 +1754,7 @@ pub const LibExeObjStep = struct {
         };
         self.computeOutFileNames();
         if (root_src) |rs| rs.addStepDependencies(&self.step);
+        builder.libexeobj_steps.append(self) catch unreachable;
         return self;
     }
 
